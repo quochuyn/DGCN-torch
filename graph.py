@@ -3,32 +3,26 @@
 # Author:     Quoc-Huy Nguyen
 # Project:    DGCN-torch
 # Description:
-#             This file contains graph-related computations.
+#             This file contains methods for graph-related computations.
 # 
 
 
 # TODO: 
 #   What if nodes are str not int?
-#   How to organize the function for the normalized adjacency matrix?
-#       Do we need a self_loops bool parameter?
-#       Should we have a function that simply normalizes A?
 
 
 # module contains graph classes
 import networkx as nx
 
-# module for tensor manipulation
 import torch
-
 import random
-
-import itertools
+import iters
 
 
 
 class graph(nx.Graph):
         
-    def compute_adjacency(self, self_loops : bool = False) -> torch.tensor:
+    def compute_adjacency(self, self_loops : bool = True) -> torch.tensor:
         '''
         Compute the (binary) adjacency matrix A of the graph.
         
@@ -60,21 +54,26 @@ class graph(nx.Graph):
         return A
     
     
-    def compute_normalized_adjacency(self) -> torch.tensor:
+    def compute_normalized_adjacency(self, self_loops : bool = True) -> torch.tensor:
         '''
         Compute the normalized adjacency matrix A of the graph.
 
-        Returns
-        -------
-        A : torch.tensor
-            Normalized adjacency matrix of the graph.
-
+        Parameters
+        ----------
+        self_loops : bool
+            Condition whether to add self-loops to the adjacency matrix.
         '''
-        pass
+        
+        A = self.compute_adjacency(self_loops)
+        
+        # degree matrix ^ (-1/2)
+        D = A.sum(axis = 1).pow(-1/2).diag() 
+        
+        return D.mm(A).mm(D)
     
     
-    def compute_frequency(self, adjacency : torch.tensor, num_walks : int,
-                          path_length : int) -> torch.tensor:
+    def compute_frequency(self, adjacency : torch.tensor, path_length : int,
+                          num_walks : int, window_size : int) -> torch.tensor:
         '''
         Compute the frequency matrix F of the graph. In the paper, the
         window size w is used to determine how to sample the node pairs from
@@ -88,7 +87,9 @@ class graph(nx.Graph):
             Length of the random walk.
         num_walks : int
             Number of random walks for each node.
-
+        window_size : int
+            Size of window that subsets the path as it slides along.
+            
         Returns
         -------
         F : torch.tensor
@@ -101,10 +102,10 @@ class graph(nx.Graph):
         
         for node in self.nodes:
             for i in range(num_walks):
-                path = self.random_walk(adjacency, node, path_length)
+                path = self.random_walk(node, path_length)
 
-                # uniformly sample all pairs from path
-                for pair in itertools.combinations(path, 2):
+                # uniformly sample all pairs from path within the window size
+                for pair in iters.window_pairs(path, window_size):
                     if pair[0] == pair[1]:
                         F[pair[0], pair[1]] += 1.0
                     else:
@@ -157,11 +158,6 @@ class graph(nx.Graph):
         ----------
         frequency : torch.tensor
             Frequency matrix of the graph.
-
-        Returns
-        -------
-        P : torch.tensor
-            Positive pointwise mutual information matrix of the graph.
         '''
         
         num_rows, num_cols = frequency.size()
@@ -178,9 +174,8 @@ class graph(nx.Graph):
         
         z = torch.zeros(num_rows, num_cols)
         pmi = torch.log(prob / (col_prob * row_prob.view(-1,1)))
-        P = torch.max(pmi, z)
         
-        return P
+        return torch.max(pmi, z)
 
     
     
