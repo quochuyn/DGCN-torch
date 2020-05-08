@@ -22,7 +22,7 @@ import iters
 
 class graph(nx.Graph):
         
-    def compute_adjacency(self, self_loops : bool = True) -> torch.tensor:
+    def adjacency_matrix(self, self_loops : bool = True) -> torch.tensor:
         '''
         Compute the (binary) adjacency matrix A of the graph.
         
@@ -36,7 +36,6 @@ class graph(nx.Graph):
         A : torch.tensor
             Adjacency matrix of the graph.
         '''
-
         
         num_nodes = self.number_of_nodes()
         
@@ -54,30 +53,32 @@ class graph(nx.Graph):
         return A
     
     
-    def compute_normalized_adjacency(self, self_loops : bool = True) -> torch.tensor:
+    def normalized_diffusion_matrix(self, diffusion : torch.tensor) -> torch.tensor:
         '''
-        Compute the normalized adjacency matrix A of the graph.
-
+        Compute the normalized diffusion matrix, i.e. the adjacency matrix or 
+        the positive pointwise mutual information matrix.
+        
         Parameters
         ----------
-        self_loops : bool
-            Condition whether to add self-loops to the adjacency matrix.
+        diffusion : torch.tensor
+            Diffusion matrix of the graph.
+
+        Returns
+        -------
+        torch.tensor
+            Normalized diffusion matrix.
         '''
         
-        A = self.compute_adjacency(self_loops)
+        # degree matrix D^(-1/2)
+        D_inv_sqrt = diffusion.sum(axis = 1).pow(-1/2).diag()
         
-        # degree matrix ^ (-1/2)
-        D = A.sum(axis = 1).pow(-1/2).diag() 
+        return D_inv_sqrt.mm(diffusion).mm(D_inv_sqrt)
         
-        return D.mm(A).mm(D)
     
-    
-    def compute_frequency(self, adjacency : torch.tensor, path_length : int,
-                          num_walks : int, window_size : int) -> torch.tensor:
+    def frequency_matrix(self, adjacency : torch.tensor, path_length : int,
+                         num_walks : int, window_size : int) -> torch.tensor:
         '''
-        Compute the frequency matrix F of the graph. In the paper, the
-        window size w is used to determine how to sample the node pairs from
-        the path, but a window size other than 2 does not make sense.
+        Compute the frequency matrix F of the graph.
 
         Parameters
         ----------
@@ -88,7 +89,7 @@ class graph(nx.Graph):
         num_walks : int
             Number of random walks for each node.
         window_size : int
-            Size of window that subsets the path as it slides along.
+            Size of window that subsets the path as it slides along path.
             
         Returns
         -------
@@ -102,20 +103,17 @@ class graph(nx.Graph):
         
         for node in self.nodes:
             for i in range(num_walks):
-                path = self.random_walk(node, path_length)
+                path = self._random_walk(node, path_length)
 
                 # uniformly sample all pairs from path within the window size
-                for pair in iters.window_pairs(path, window_size):
-                    if pair[0] == pair[1]:
-                        F[pair[0], pair[1]] += 1.0
-                    else:
-                        F[pair[0], pair[1]] += 1.0
-                        F[pair[1], pair[0]] += 1.0
+                for pair in iters.right_window_pairs(path, window_size):
+                    F[pair[0], pair[1]] += 1.0
+                    F[pair[1], pair[0]] += 1.0
 
         return F
     
     
-    def random_walk(self, node : int, path_length : int) -> list:
+    def _random_walk(self, node : int, path_length : int) -> [int]:
         '''
         Conduct a random walk over the graph.
 
@@ -128,7 +126,7 @@ class graph(nx.Graph):
 
         Returns
         -------
-        path : list
+        path : [int]
             Random walk path.
         '''
 
@@ -138,7 +136,7 @@ class graph(nx.Graph):
         for i in range(path_length - 1):
             neighbors = list(self.neighbors(node))
             
-            # assume undirected graph, so not necessary
+            # assume undirected in nx.Graph, so not necessary
             # if len(neighbors) < 1:
             #     break
             neighbor = random.choice(neighbors)
@@ -149,15 +147,20 @@ class graph(nx.Graph):
         return path
             
     
-    def compute_PPMI(self, frequency : torch.tensor) -> torch.tensor:
+    def ppmi_matrix(self, frequency : torch.tensor) -> torch.tensor:
         '''
-        Compute the positive pointwise mutual information PPMI matrix of the 
+        Compute the positive pointwise mutual information (PPMI) matrix of the 
         graph. 
 
         Parameters
         ----------
         frequency : torch.tensor
             Frequency matrix of the graph.
+        
+        Returns
+        -------
+        torch.tensor
+            Positive pointwise mutual information matrix.
         '''
         
         num_rows, num_cols = frequency.size()
@@ -177,5 +180,3 @@ class graph(nx.Graph):
         
         return torch.max(pmi, z)
 
-    
-    
