@@ -53,8 +53,8 @@ class hidden_dense_layer(nn.Module):
         
         # reassign weight to linear layer if given one
         if W is not None:
-            if type(W) != torch.tensor:
-                raise TypeError("hidden_dense_layer.__init__: W must be type torch.tensor")
+            # if type(W) != torch.tensor:
+            #     raise TypeError(f"hidden_dense_layer.__init__: W must be type torch.tensor, got ({type(W)})")
             if W.size() != (out_features, in_features):
                 raise ValueError(f"hidden_dense_layer.__init__: W must be size {(out_features, in_features)}, got ({W.size()})")
             linear.weight.data = W
@@ -69,13 +69,13 @@ class hidden_dense_layer(nn.Module):
         self.layers.add_module("activation", activation)
         
     
-    def forward(self, x : torch.tensor) -> torch.tensor:
+    def forward(self, input : torch.tensor) -> torch.tensor:
         '''
         Pass through the hidden layer.
 
         Parameters
         ----------
-        x : torch.tensor
+        input : torch.tensor
             Input tensor.
 
         Returns
@@ -83,6 +83,5 @@ class hidden_dense_layer(nn.Module):
         torch.tensor
             Output tensor.
         '''
-        
-        return self.layers(self.diffusion.mm(x))
+        return self.layers(self.diffusion.mm(input))
     
