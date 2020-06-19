@@ -9,7 +9,11 @@
 
 import sys
 import pickle
+
 import torch
+import numpy as np
+import scipy.sparse as sp
+
 import graphs
 import utilities
 
@@ -57,8 +61,21 @@ def _read_index_file(file : str) -> [int]:
 
 
 def _fix_citeseer(tx, ty, test_idx_reorder, test_idx_range):
-    #TODO
-    raise Exception("_fix_citeseer: TODO; Function not implemented yet.")
+    r"""
+    Fix citeseet dataset (there are some isolated nodes in the graph)
+    Find isolated nodes, add them as zero-vectors into the right position.
+    """
+    
+    test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
+    tx_extended = sp.lil_matrix((len(test_idx_range_full), tx.shape[1]), dtype=np.float32)
+    tx_extended[test_idx_range - min(test_idx_range), :] = tx
+    tx = tx_extended
+    ty_extended = np.zeros((len(test_idx_range_full), ty.shape[1]), dtype=np.int32)
+    ty_extended[test_idx_range - min(test_idx_range), :] = ty
+    ty = ty_extended
+    
+    return tx, ty
+    
 
 
 
@@ -113,12 +130,12 @@ def load_graph_data(DATASET : str, trace : bool = False):
     
     # test.index : indices of testing instances in graph 
     test_idx_reorder = _read_index_file(f'data/ind.{DATASET}.test.index')
-    test_idx_range = sorted(test_idx_reorder)
+    test_idx_range = np.sort(test_idx_reorder)
     
     if DATASET == "citeseer":
         tx, ty = _fix_citeseer(tx, ty, test_idx_reorder, test_idx_range)
     
-    # get the Graph: G
+    # get the graph: G
     G = graphs.graph(graph)
     
     # get the features: x

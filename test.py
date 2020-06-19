@@ -113,13 +113,13 @@ def plot_losses(*results, rows, cols):
     
 if __name__ == '__main__':
     # dataset = sys.argv[1]
-    dataset = 'pubmed'
+    dataset = 'citeseer'
     print(f"Testing dataset... {dataset}")
     
     if dataset in ['cora', 'citeseer', 'pubmed']:
         result = test_DGCN(dataset=dataset, epochs=100, learning_rate=1e-3, 
-                           batch_size=0, hidden_size=32, dropout_rate=0.3, 
-                           trace=True)
+                            batch_size=0, hidden_size=32, dropout_rate=0.3, 
+                            trace=True)
         plot_losses(*result, rows=1, cols=len(result))
     else:
         print(f"No such a dataset: {dataset}")
