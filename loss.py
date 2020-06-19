@@ -13,7 +13,7 @@ import torch.nn as nn
 
 
 
-class MaskedMSELoss(nn.Module):
+[docs]class MaskedMSELoss(nn.Module):
     r"""
     Masked mean square error loss.
     """
@@ -47,7 +47,7 @@ class MaskedCrossEntropyLoss(nn.Module):
         return input
 
 
-class DualLoss(nn.Module):
+[docs]class DualLoss(nn.Module):
     r"""
     Dual loss.
     """
