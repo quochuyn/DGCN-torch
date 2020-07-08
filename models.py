@@ -5,7 +5,7 @@
 # Description:
 #             This is a PyTorch implementation of DGCN, a Dual Graph 
 #             Convolutional Neural Network for graph-based semi-supervised 
-#             classification described in the Chenyi Zhuang, Qiang Ma paper.
+#             classification described in the Chenyi Zhuang and Qiang Ma paper.
 # 
 
 

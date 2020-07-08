@@ -26,8 +26,13 @@ class FileExtensionError(OSError):
 
 def _read_binary_file(file : str):
     r"""
-    Read a binary file with extension 'x', 'y', 'tx', 'tx', 'allx', 'ally',
-    or 'graph'.
+    Reads a binary file with extension 'x', 'y', 'tx', 'tx', 'allx', 'ally',
+    or 'graph' and returning the pickled file.
+    
+    Parameters
+    ----------
+    file : str
+        String representation of the file path.
     """
     
     NAMES = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
@@ -46,8 +51,18 @@ def _read_binary_file(file : str):
 
 def _read_index_file(file : str) -> [int]:
     r"""
-    Read a file with extension 'index' returning a list of integers specifying 
+    Reads a file with extension 'index' and returns a list of integers specifying 
     indices.
+    
+    Parameters
+    ----------
+    file : str
+        String representation of the file path.
+        
+    Returns
+    -------
+    [int]
+        List of integers specifying the indices.
     """
     
     extension = file.split('.')[-1]
@@ -67,16 +82,17 @@ def _fix_citeseer(tx, ty, test_idx_reorder, test_idx_range):
     """
     
     test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
+    
     tx_extended = sp.lil_matrix((len(test_idx_range_full), tx.shape[1]), dtype=np.float32)
     tx_extended[test_idx_range - min(test_idx_range), :] = tx
     tx = tx_extended
+    
     ty_extended = np.zeros((len(test_idx_range_full), ty.shape[1]), dtype=np.int32)
     ty_extended[test_idx_range - min(test_idx_range), :] = ty
     ty = ty_extended
     
     return tx, ty
     
-
 
 
 def load_graph_data(DATASET : str, trace : bool = False):
@@ -88,7 +104,7 @@ def load_graph_data(DATASET : str, trace : bool = False):
     DATASET : str
         Name of dataset.
     trace : bool
-        Boolean value whether to trace the output.
+        Boolean value whether to trace the output. The default value is False.
 
     Returns
     -------
@@ -120,14 +136,11 @@ def load_graph_data(DATASET : str, trace : bool = False):
     # graph : dict in the form of {index: [index_of_neighbor_nodes]}
     NAMES = ['x', 'y', 'tx', 'ty', 'allx', 'ally', 'graph']
     OBJECTS = []
-    for i in range(len(NAMES)):
-        with open('data/ind.{}.{}'.format(DATASET, NAMES[i]), 'rb') as open_file:
-            if sys.version_info > (3, 0):
-                OBJECTS.append(pickle.load(open_file, encoding='latin1'))
-            else:
-                OBJECTS.append(pickle.load(open_file))
+    for name in NAMES:
+        pickled_file = _read_binary_file(f'data/ind.{DATASET}.{name}')
+        OBJECTS.append(pickled_file)
     x, y, tx, ty, allx, ally, graph = OBJECTS
-    
+
     # test.index : indices of testing instances in graph 
     test_idx_reorder = _read_index_file(f'data/ind.{DATASET}.test.index')
     test_idx_range = np.sort(test_idx_reorder)
@@ -150,8 +163,8 @@ def load_graph_data(DATASET : str, trace : bool = False):
     
     # train, validation, test indices
     idx_train = range(len(y))
-    idx_val   = range(len(y), len(y) + 500) # should we specify validation size?
-    idx_test  = test_idx_range # i dont think tolist() is a torch method
+    idx_val   = range(len(y), len(y) + 500) # TODO should we specify validation size?
+    idx_test  = test_idx_range
     
     # train, validation, test masks
     train_mask = utilities._sample_mask(idx_train, labels.shape[0])

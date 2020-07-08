@@ -20,8 +20,6 @@ class MaskedMSELoss(nn.Module):
     to the boolean mask `target_mask` which is a BoolTensor.
     
     The unreduced loss (i.e. when reduction is 'none') can be described as
-    
-    .. math::
         
         \ell(x,y) = L = \{l_1,\dots,l_N}^\top * M, \quad
         l_n = \left( x_n - y_n \right)^2,
@@ -75,7 +73,16 @@ class MaskedCrossEntropyLoss(nn.Module):
 
 class DualLoss(nn.Module):
     r"""
-    Dual loss combining both supervised and unsupervised loss. TODO
+    The dual loss combines both a supervised and an unsupervised loss in one
+    single class. The learnable weight that combines the two losses is 
+    randomly initialized from a standard normal distribution scaled down. 
+    
+    Parameters
+    ----------
+    supervised_loss_fnc : torch.nn.Module
+        Supervised loss with respect to the labeled data.
+    unsupervised_loss_fnc : torch.nn.Module
+        Unsupervised loss with respect to the graph structure.
     """
     
     def __init__(self, supervised_loss_fnc, unsupervised_loss_fnc):
@@ -84,7 +91,7 @@ class DualLoss(nn.Module):
         self.unsupervised_loss_fnc = unsupervised_loss_fnc
 
     def forward(self, a_input, ppmi_input, target, target_mask):
-        weight = nn.Parameter(torch.rand(1))
+        weight = nn.Parameter(torch.randn(1)) * 0.01
         
         result = (self.supervised_loss_fnc(a_input, target, target_mask)
                   + weight * self.unsupervised_loss_fnc(a_input, ppmi_input))
