@@ -95,7 +95,7 @@ def _fix_citeseer(tx, ty, test_idx_reorder, test_idx_range):
     
 
 
-def load_graph_data(DATASET : str, trace : bool = False):
+def load_graph_data(DATASET : str, val_size : float, trace : bool = False):
     r"""
     Load graph data for testing.
 
@@ -103,7 +103,10 @@ def load_graph_data(DATASET : str, trace : bool = False):
     ----------
     DATASET : str
         Name of dataset.
-    trace : bool
+    val_size : float
+        Should be between 0.0 and 1.0 and represent the proportion of the
+        remaining unlabeled training features.
+    trace : bool, optional
         Boolean value whether to trace the output. The default value is False.
 
     Returns
@@ -152,7 +155,8 @@ def load_graph_data(DATASET : str, trace : bool = False):
     G = graphs.graph(graph)
     
     # get the features: x
-    features = torch.cat((torch.as_tensor(allx.toarray()), torch.as_tensor(tx.toarray())))
+    features = torch.cat((torch.as_tensor(allx.toarray()), 
+                          torch.as_tensor(tx.toarray())))
     features[test_idx_reorder, :] = features[test_idx_range, :]
     if trace:   print("  Feature matrix: ", tuple(features.shape))
     
@@ -162,14 +166,16 @@ def load_graph_data(DATASET : str, trace : bool = False):
     if trace:   print("  Label matrix: ", tuple(labels.shape))
     
     # train, validation, test indices
-    idx_train = range(len(y))
-    idx_val   = range(len(y), len(y) + 500) # TODO should we specify validation size?
-    idx_test  = test_idx_range
+    train_size = len(y)
+    idx_train  = range(train_size)
+    idx_val    = range(train_size, train_size + int(val_size * (test_idx_range[0] - train_size)))
+    idx_test   = test_idx_range
     
     # train, validation, test masks
-    train_mask = utilities._sample_mask(idx_train, labels.shape[0])
-    val_mask   = utilities._sample_mask(idx_val, labels.shape[0])
-    test_mask  = utilities._sample_mask(idx_test, labels.shape[0])
+    dataset_size = features.shape[0]
+    train_mask   = utilities._sample_mask(idx_train, dataset_size)
+    val_mask     = utilities._sample_mask(idx_val, dataset_size)
+    test_mask    = utilities._sample_mask(idx_test, dataset_size)
     
     # initialize train, validation, test labels
     y_train = torch.zeros(labels.shape, dtype=torch.int)
@@ -178,9 +184,51 @@ def load_graph_data(DATASET : str, trace : bool = False):
     
     # define train, validation, test labels
     y_train[train_mask, :] = labels[train_mask, :]
-    y_val[val_mask, :]   = labels[val_mask, :]
-    y_test[test_mask, :]  = labels[test_mask, :]
+    y_val[val_mask, :]     = labels[val_mask, :]
+    y_test[test_mask, :]   = labels[test_mask, :]
     
     return G, features, y_train, y_val, y_test, train_mask, val_mask, test_mask
     
+
+def diffusion_matrices(G, self_loops : bool, path_length : int, num_walks : int,
+                       window_size : int, trace : bool = False):
+    r"""
+    Given a graph G, returns the two diffusion matrices: the adjacency and ppmi 
+    matrices.
+
+    Parameters
+    ----------
+    G : graphs.graph
+        A derived class from networkx.Graph for undirected graphs that includes 
+        additional methods for computing graph-related torch.tensor matrices.
+    self_loops : bool
+        Condition whether to add self-loops to the adjacency matrix.
+    path_length : int
+        Length of the random walk used when sampling the graph (i.e.
+        computing the frequency matrix).
+    num_walks : int
+        Number of random walks for each node used when sampling the graph 
+        (i.e. computing the frequency matrix).
+    window_size : int
+        Size of window that subsets the path as it slides along path when
+        sampling the graph (i.e. computing the frequency matrix).
+    trace : bool, optional
+        Boolean value whether to trace the output. The default value is False.
+
+    Returns
+    -------
+    adjacency : torch.tensor
+        Normalized adjacency matrix of the graph.
+    ppmi : torch.tensor
+        Normalized positive pointwise mutual information matrix.
+    """
     
+    adjacency = G.normalized_adjacency_matrix(self_loops)
+    if trace:   print("  Adjacency matrix: ", tuple(adjacency.shape))
+    
+    print("Sampling graph...")
+    ppmi = G.normalized_ppmi_matrix(path_length, num_walks, window_size)
+    if trace:   print("  PPMI matrix: ", tuple(ppmi.shape))
+    
+    return adjacency, ppmi
+

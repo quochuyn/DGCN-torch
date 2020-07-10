@@ -7,6 +7,10 @@
 # 
 
 
+# TODO:
+#   Implement MaskedCrossEntropyLoss.
+#   Add extra weight functions to the DualLoss (e.g. ramp-up)
+
 
 import torch
 import torch.nn as nn
@@ -56,6 +60,7 @@ class MaskedMSELoss(nn.Module):
                 result = torch.sum(result)
             
         return result
+    
 
 
 class MaskedCrossEntropyLoss(nn.Module):
@@ -67,8 +72,8 @@ class MaskedCrossEntropyLoss(nn.Module):
         super(MaskedCrossEntropyLoss, self).__init__()
     
     def forward(self, input, target, target_mask):
-        #TODO: this is for the nell_dataset
         return input
+
 
 
 class DualLoss(nn.Module):

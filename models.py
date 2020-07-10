@@ -21,7 +21,12 @@ from layers import hidden_dense_layer
 
 class DGCN(nn.Module):
     """
-    Dual Graph Convolutional Neural Network. TODO: Better description.
+    The Dual Graph Convolutional Neural Network (DGCN) is a model for 
+    graph-based semi-supervised classifation. It combines two neural
+    networks that simultaneously learns the `local consistency-based knowledge' 
+    and the `global consistency-based knowledge' of the graph structured data. 
+    Respectively, the adjacency and positive pointwise mutual information 
+    (PPMI) matrices capture these knowledges.
 
     Parameters
     ----------
@@ -34,20 +39,19 @@ class DGCN(nn.Module):
     dropout_rate : float, optional
         Dropout rate at each layer. The default is 0.3.
     activation : optional
-        The final activation layer. The default is torch.nn.Softmax(dim=1).
-    nell_dataset : bool
-        True if we are testing the nell dataset and False otherwise. The 
-        default is false.
+        The activation function for the hidden layers. The default is 
+        torch.nn.ReLU().
+    final_activation : optional
+        The final activation function for the output layer. The default is 
+        torch.nn.Softmax(dim=1).
     """
     
+    
     def __init__(self, layer_sizes, adjacency, ppmi, dropout_rate = 0.3, 
-                 activation = nn.Softmax(dim=1), nell_dataset = False):
+                 activation = nn.ReLU(), final_activation = nn.Softmax(dim=1)):
         super(DGCN, self).__init__()
         self.a_layers = nn.Sequential()
         self.ppmi_layers = nn.Sequential()
-        self.l1 = 0.0
-        self.l2 = 0.0
-        self.loss = 0.0
         
         # define the dual NN sharing the same weight W
         for index, (n_in, n_out) in enumerate(layer_sizes):
@@ -55,42 +59,27 @@ class DGCN(nn.Module):
                 in_features  = n_in,
                 out_features = n_out,
                 diffusion    = adjacency,
-                dropout_rate = (0.0 if index == 0 else dropout_rate))
+                dropout_rate = dropout_rate,
+                activation   = activation)
             self.a_layers.add_module(f'hidden_a{index + 1}', _hidden_layer_a)
             
             _hidden_layer_ppmi = hidden_dense_layer(
                 in_features  = n_in,
                 out_features = n_out,
                 diffusion    = ppmi,
+                dropout_rate = dropout_rate,
                 W            = _hidden_layer_a.weight,
-                dropout_rate = (0.0 if index == 0 else dropout_rate))
+                activation   = activation)
             self.ppmi_layers.add_module(f'hidden_ppmi{index + 1}', _hidden_layer_ppmi)
 
         # add the final activation layer to apply labels
-        self.a_layers.add_module('final_activation_a', activation)
-        self.ppmi_layers.add_module('final_activation_ppmi', activation)
-        
-        # define the supervised loss
-        if nell_dataset:
-            self.supervised_loss = loss.MaskedCrossEntropyLoss()
-        else:
-            self.supervised_loss = loss.MaskedMSELoss(reduction='mean')
-        
-        # define the unsupervised loss
-        self.unsupervised_loss = nn.MSELoss(reduction='mean')
-        
-        # define the dual loss
-        self.dual_loss = loss.DualLoss(self.supervised_loss, self.unsupervised_loss)
-        
-            
+        self.a_layers.add_module('final_activation_a', final_activation)
+        self.ppmi_layers.add_module('final_activation_ppmi', final_activation)
         
         
-        
-    def forward(self, input : torch.tensor) -> torch.tensor:
+    def forward(self, input : torch.tensor) -> (torch.tensor, torch.tensor):
         output_a = self.a_layers(input)
         output_ppmi = self.ppmi_layers(input)
-        
-        # define the regularizer #TODO: why do we need this again?
         
         return (output_a, output_ppmi)
     

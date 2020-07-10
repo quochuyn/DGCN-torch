@@ -8,7 +8,8 @@
 
 
 # TODO: 
-#   What if nodes are str not int?
+#   What if nodes are strings not integers?
+#   Try to vectorize some of the computations, if there is extra time.
 
 
 # module contains graph classes
@@ -22,18 +23,25 @@ import iterators
 
 class graph(nx.Graph):
     r"""
-    Derived class from networkx.Graph for undirected graphs that includes
+    Derived class of networkx.Graph for undirected graphs that includes
     aditional methods for computing graph-related torch.tensor matrices.
     
     The method adjacency_matrix() is overloaded in this derived class to
-    return a torch.tensor matrix.
+    return a torch.tensor matrix instead of a scipy.sparse matrix.
     """
     
     
     def normalized_diffusion_matrix(self, diffusion : torch.tensor) -> torch.tensor:
         r"""
         Compute the normalized diffusion matrix, i.e. the adjacency matrix or 
-        the positive pointwise mutual information matrix.
+        the positive pointwise mutual information matrix. 
+        
+        The computation can be described as 
+        
+            D^{-1/2} A D^{-1/2} 
+        
+        where `A` is the diffusion matrix and the matrix `D` has diagonal entries 
+        D_{i, i} = \sum_{j} A_{i, j}.
         
         Parameters
         ----------
@@ -46,9 +54,7 @@ class graph(nx.Graph):
             Normalized diffusion matrix.
         """
         
-        # degree matrix D^(-1/2)
-        D_inv_sqrt = diffusion.sum(axis = 1).pow(-1/2).diag()
-        
+        D_inv_sqrt = diffusion.sum(axis=1).pow(-1/2).diag()
         return D_inv_sqrt.mm(diffusion).mm(D_inv_sqrt)
     
         
@@ -56,10 +62,16 @@ class graph(nx.Graph):
         r"""
         Compute the (binary) adjacency matrix of the graph.
         
+        The computation can be described as
+            
+            A_{i,j} = 1 if self_loops = True or vertices v_i, v_j share an edge
+            A_{i,j} = 0 otherwise
+        
         Parameters
         ----------
         self_loops : bool
-            Condition whether to add self-loops to the adjacency matrix.
+            Condition whether to add self-loops to the adjacency matrix. The
+            default value is False.
 
         Returns
         -------
@@ -87,10 +99,17 @@ class graph(nx.Graph):
         r"""
         Compute the normalized (binary) adjacency matrix A of the graph.
         
+        The computation can be described as
+        
+            \tilde{A} = D^{-1/2} A D^{-1/2}
+        
+        where `A` is the adjacency matrix and `D` is the diagonal degree matrix.
+        
         Parameters
         ----------
         self_loops : bool
-            Condition whether to add self-loops to the adjacency matrix.
+            Condition whether to add self-loops to the adjacency matrix. The
+            default value is False.
 
         Returns
         -------
@@ -116,7 +135,7 @@ class graph(nx.Graph):
         Returns
         -------
         path : [int]
-            Random walk path.
+            A list of integers for a random walk path.
         """
 
         path = [node]
@@ -125,12 +144,11 @@ class graph(nx.Graph):
         for i in range(path_length - 1):
             neighbors = list(self.neighbors(node))
             
-            # assume undirected in nx.Graph, so not necessary
-            # if len(neighbors) < 1:
-            #     break
-            neighbor = random.choice(neighbors)
-        
-            node = neighbor
+            # if a node has no neighbors, i.e. an isolated node
+            if len(neighbors) < 1:
+                break
+            
+            node = random.choice(neighbors)
             path.append(node)
         
         return path
@@ -172,49 +190,78 @@ class graph(nx.Graph):
         return frequency
 
     
-    def ppmi_matrix(self, frequency : torch.tensor) -> torch.tensor:
+    def ppmi_matrix(self, path_length : int, num_walks : int, 
+                    window_size : int) -> torch.tensor:
         r"""
         Compute the positive pointwise mutual information (PPMI) matrix of the 
-        graph. 
-
+        graph.
+        
         Parameters
         ----------
-        frequency : torch.tensor
-            Frequency matrix of the graph.
-
+        path_length : int
+            Length of the random walk used when sampling the graph (i.e.
+            computing the frequency matrix).
+        num_walks : int
+            Number of random walks for each node used when sampling the graph 
+            (i.e. computing the frequency matrix).
+        window_size : int
+            Size of window that subsets the path as it slides along path when
+            sampling the graph (i.e. computing the frequency matrix).
+            
         Returns
         -------
         ppmi : torch.tensor
             Positive pointwise mutual information matrix.
         """
         
+        # compute the frequency matrix (aka sampling the graph)
+        frequency = self.frequency_matrix(path_length = path_length, 
+                                          num_walks   = num_walks, 
+                                          window_size = window_size)
+        
         num_rows, num_cols = frequency.size()
         sum_total = frequency.sum()
         
         # estimated probability of each node occuring in each context
-        prob = frequency / sum_total
+        probs = frequency / sum_total
         
         # estimated probability of each node
-        row_prob = frequency.sum(axis=1) / sum_total
+        row_probs = frequency.sum(axis=1) / sum_total
         
         # estimated probability of each context
-        col_prob = frequency.sum(axis=0) / sum_total
+        col_probs = frequency.sum(axis=0) / sum_total
         
         z = torch.zeros(num_rows, num_cols)
-        pmi = torch.log(prob / (col_prob * row_prob.view(-1,1)))
+        pmi = torch.log(probs / (col_probs * row_probs.reshape(-1,1)))
         ppmi = torch.max(pmi, z)
 
         return ppmi
 
-    def normalized_ppmi_matrix(self, frequency : torch.tensor) -> torch.tensor:
+
+    def normalized_ppmi_matrix(self, path_length : int, num_walks : int, 
+                               window_size : int) -> torch.tensor:
         r"""
         Compute the normalized positive pointwise mutual information (PPMI)
-        matrix of the graph. 
+        matrix of the graph.
+        
+        The computation can be described as
+        
+            \tilde^{P} = D^{-1/2} P D^{-1/2}
+        
+        where `P` is the PPMI matrix and the matrix `D` has diagonal entries 
+        D_{i, i} = \sum_{j} A_{i, j}.
 
         Parameters
         ----------
-        frequency : torch.tensor
-            Frequency matrix of the graph.
+        path_length : int
+            Length of the random walk used when sampling the graph (i.e.
+            computing the frequency matrix).
+        num_walks : int
+            Number of random walks for each node used when sampling the graph 
+            (i.e. computing the frequency matrix).
+        window_size : int
+            Size of window that subsets the path as it slides along path when
+            sampling the graph (i.e. computing the frequency matrix).
 
         Returns
         -------
@@ -222,5 +269,9 @@ class graph(nx.Graph):
             Normalized positive pointwise mutual information matrix.
         """
         
-        ppmi = self.ppmi_matrix(frequency)
+        ppmi = self.ppmi_matrix(path_length = path_length, 
+                                num_walks   = num_walks, 
+                                window_size = window_size)
         return self.normalized_diffusion_matrix(ppmi)
+
+
