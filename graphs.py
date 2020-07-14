@@ -24,14 +24,14 @@ import iterators
 class graph(nx.Graph):
     r"""
     Derived class of networkx.Graph for undirected graphs that includes
-    aditional methods for computing graph-related torch.tensor matrices.
+    aditional methods for computing graph-related torch.Tensor matrices.
     
     The method adjacency_matrix() is overloaded in this derived class to
-    return a torch.tensor matrix instead of a scipy.sparse matrix.
+    return a torch.Tensor matrix instead of a scipy.sparse matrix.
     """
     
     
-    def normalized_diffusion_matrix(self, diffusion : torch.tensor) -> torch.tensor:
+    def normalized_diffusion_matrix(self, diffusion : torch.Tensor) -> torch.Tensor:
         r"""
         Compute the normalized diffusion matrix, i.e. the adjacency matrix or 
         the positive pointwise mutual information matrix. 
@@ -45,12 +45,12 @@ class graph(nx.Graph):
         
         Parameters
         ----------
-        diffusion : torch.tensor
+        diffusion : torch.Tensor
             Diffusion matrix of the graph.
 
         Returns
         -------
-        torch.tensor
+        torch.Tensor
             Normalized diffusion matrix.
         """
         
@@ -58,7 +58,7 @@ class graph(nx.Graph):
         return D_inv_sqrt.mm(diffusion).mm(D_inv_sqrt)
     
         
-    def adjacency_matrix(self, self_loops : bool = False) -> torch.tensor:
+    def adjacency_matrix(self, self_loops : bool = False) -> torch.Tensor:
         r"""
         Compute the (binary) adjacency matrix of the graph.
         
@@ -75,7 +75,7 @@ class graph(nx.Graph):
 
         Returns
         -------
-        adjacency : torch.tensor
+        adjacency : torch.Tensor
             Adjacency matrix of the graph.
         """
         
@@ -95,7 +95,7 @@ class graph(nx.Graph):
         return adjacency
     
     
-    def normalized_adjacency_matrix(self, self_loops : bool = False) -> torch.tensor:
+    def normalized_adjacency_matrix(self, self_loops : bool = False) -> torch.Tensor:
         r"""
         Compute the normalized (binary) adjacency matrix A of the graph.
         
@@ -113,7 +113,7 @@ class graph(nx.Graph):
 
         Returns
         -------
-        torch.tensor
+        torch.Tensor
             Normalized adjacency matrix of the graph.
         """
         
@@ -155,7 +155,7 @@ class graph(nx.Graph):
         
     
     def frequency_matrix(self, path_length : int, num_walks : int,
-                         window_size : int) -> torch.tensor:
+                         window_size : int) -> torch.Tensor:
         r"""
         Compute the frequency matrix of the graph.
 
@@ -170,7 +170,7 @@ class graph(nx.Graph):
             
         Returns
         -------
-        frequency : torch.tensor
+        frequency : torch.Tensor
             Frequency matrix of the graph.
         """
         
@@ -191,7 +191,7 @@ class graph(nx.Graph):
 
     
     def ppmi_matrix(self, path_length : int, num_walks : int, 
-                    window_size : int) -> torch.tensor:
+                    window_size : int) -> torch.Tensor:
         r"""
         Compute the positive pointwise mutual information (PPMI) matrix of the 
         graph.
@@ -210,7 +210,7 @@ class graph(nx.Graph):
             
         Returns
         -------
-        ppmi : torch.tensor
+        ppmi : torch.Tensor
             Positive pointwise mutual information matrix.
         """
         
@@ -239,7 +239,7 @@ class graph(nx.Graph):
 
 
     def normalized_ppmi_matrix(self, path_length : int, num_walks : int, 
-                               window_size : int) -> torch.tensor:
+                               window_size : int) -> torch.Tensor:
         r"""
         Compute the normalized positive pointwise mutual information (PPMI)
         matrix of the graph.
@@ -265,7 +265,7 @@ class graph(nx.Graph):
 
         Returns
         -------
-        torch.tensor
+        torch.Tensor
             Normalized positive pointwise mutual information matrix.
         """
         

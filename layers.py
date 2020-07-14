@@ -26,12 +26,12 @@ class hidden_dense_layer(nn.Module):
         Number of features of input tensor.
     out_features : int
         Number of features of output tensor.
-    diffusion : torch.tensor
+    diffusion : torch.Tensor
         Diffusion matrix, i.e. the adjacency matrix or positive pointwise
         mutual information matrix.
     dropout_rate : float
         Dropout rate for randomly settings some elements as zero. 
-    W : torch.tensor, optional
+    W : torch.Tensor, optional
         User-defined weight matrix. The default is None.
     activation : optional
         An activation layer from torch.nn. The default is 
@@ -40,8 +40,8 @@ class hidden_dense_layer(nn.Module):
     
     
     def __init__(self, in_features : int, out_features : int,
-                 diffusion : torch.tensor, dropout_rate : float = 0.3,
-                 W : torch.tensor = None, activation = nn.ReLU()):
+                 diffusion : torch.Tensor, dropout_rate : float = 0.3,
+                 W : torch.Tensor = None, activation = nn.ReLU()):
         
         super(hidden_dense_layer, self).__init__()
         self.in_features = in_features
@@ -68,6 +68,6 @@ class hidden_dense_layer(nn.Module):
             self.layers.add_module("dropout", dropout)
         
         
-    def forward(self, input : torch.tensor) -> torch.tensor:
+    def forward(self, input : torch.Tensor) -> torch.Tensor:
         return self.layers(self.diffusion.mm(input))
     

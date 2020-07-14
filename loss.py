@@ -8,12 +8,12 @@
 
 
 # TODO:
-#   Implement MaskedCrossEntropyLoss.
 #   Add extra weight functions to the DualLoss (e.g. ramp-up)
 
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 
@@ -25,8 +25,8 @@ class MaskedMSELoss(nn.Module):
     
     The unreduced loss (i.e. when reduction is 'none') can be described as
         
-        \ell(x,y) = L = \{l_1,\dots,l_N}^\top * M, \quad
-        l_n = \left( x_n - y_n \right)^2,
+        \ell(x,y) = L = \{l_1,\dots,l_N}^\top * \{m_1,\dots,m_N\}, \quad
+        l_n = (x_n - y_n)^2, \quad m_n \in \{0,1\}
         
     where `x` and `y` are tensors of arbitrary shape with `n` elements, `N` 
     is the batch size, `*` the element-wise multiplication operator, and `M`
@@ -55,12 +55,11 @@ class MaskedMSELoss(nn.Module):
         result *= target_mask
         if self.reduction != 'none':
             if self.reduction == 'mean':
-                result = torch.mean(result)
+                result = torch.sum(result) / target.numel()
             else:
                 result = torch.sum(result)
-            
         return result
-    
+        
 
 
 class MaskedCrossEntropyLoss(nn.Module):
@@ -68,12 +67,20 @@ class MaskedCrossEntropyLoss(nn.Module):
     Masked cross entropy loss. TODO
     """
     
-    def __init__(self, weight=None, ignore_index=-100, reduction='mean'):
+    def __init__(self, reduction='mean'):
         super(MaskedCrossEntropyLoss, self).__init__()
-    
+        self.reduction = reduction
+        
     def forward(self, input, target, target_mask):
-        return input
-
+        result = -(target * input.log()).sum(axis=1)
+        result *= target_mask
+        if self.reduction != 'none':
+            if self.reduction == 'mean':
+                result = torch.sum(result) / target.numel()
+            else:
+                result = torch.sum(result)
+        return result
+        
 
 
 class DualLoss(nn.Module):
@@ -97,7 +104,6 @@ class DualLoss(nn.Module):
 
     def forward(self, a_input, ppmi_input, target, target_mask):
         weight = nn.Parameter(torch.randn(1)) * 0.01
-        
         result = (self.supervised_loss_fnc(a_input, target, target_mask)
                   + weight * self.unsupervised_loss_fnc(a_input, ppmi_input))
         return result

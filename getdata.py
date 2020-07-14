@@ -113,20 +113,20 @@ def load_graph_data(DATASET : str, val_size : float, trace : bool = False):
     -------
     G : graphs.graph
         A derived class from networkx.Graph for undirected graphs that includes 
-        additional methods for computing graph-related torch.tensor matrices.
-    features : torch.tensor
+        additional methods for computing graph-related torch.Tensor matrices.
+    features : torch.Tensor
         Feature matrix that includes labeled and unlabeled data.
-    y_train : torch.tensor
+    y_train : torch.Tensor
         Training labels.
-    y_val : torch.tensor
+    y_val : torch.Tensor
         Validation labels.
-    y_test : torch.tensor
+    y_test : torch.Tensor
         Testing labels.
-    train_mask : torch.tensor
+    train_mask : torch.Tensor
         Training mask.
-    val_mask : torch.tensor
+    val_mask : torch.Tensor
         Validation mask.
-    test_mask : torch.tensor
+    test_mask : torch.Tensor
         Testing mask.
     """
     
@@ -173,9 +173,9 @@ def load_graph_data(DATASET : str, val_size : float, trace : bool = False):
     
     # train, validation, test masks
     dataset_size = features.shape[0]
-    train_mask   = utilities._sample_mask(idx_train, dataset_size)
-    val_mask     = utilities._sample_mask(idx_val, dataset_size)
-    test_mask    = utilities._sample_mask(idx_test, dataset_size)
+    train_mask   = utilities.sample_mask(idx_train, dataset_size)
+    val_mask     = utilities.sample_mask(idx_val, dataset_size)
+    test_mask    = utilities.sample_mask(idx_test, dataset_size)
     
     # initialize train, validation, test labels
     y_train = torch.zeros(labels.shape, dtype=torch.int)
@@ -200,7 +200,7 @@ def diffusion_matrices(G, self_loops : bool, path_length : int, num_walks : int,
     ----------
     G : graphs.graph
         A derived class from networkx.Graph for undirected graphs that includes 
-        additional methods for computing graph-related torch.tensor matrices.
+        additional methods for computing graph-related torch.Tensor matrices.
     self_loops : bool
         Condition whether to add self-loops to the adjacency matrix.
     path_length : int
@@ -217,9 +217,9 @@ def diffusion_matrices(G, self_loops : bool, path_length : int, num_walks : int,
 
     Returns
     -------
-    adjacency : torch.tensor
+    adjacency : torch.Tensor
         Normalized adjacency matrix of the graph.
-    ppmi : torch.tensor
+    ppmi : torch.Tensor
         Normalized positive pointwise mutual information matrix.
     """
     

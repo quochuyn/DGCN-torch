@@ -32,9 +32,9 @@ class DGCN(nn.Module):
     ----------
     layer_sizes : [(int, int)]
         List of 2-tuples for hidden layer sizes.
-    adjacency : torch.tensor
+    adjacency : torch.Tensor
         Adjacency matrix of the graph.
-    ppmi : torch.tensor
+    ppmi : torch.Tensor
         Positive pointwise mutual information matrix of the graph.
     dropout_rate : float, optional
         Dropout rate at each layer. The default is 0.3.
@@ -77,7 +77,7 @@ class DGCN(nn.Module):
         self.ppmi_layers.add_module('final_activation_ppmi', final_activation)
         
         
-    def forward(self, input : torch.tensor) -> (torch.tensor, torch.tensor):
+    def forward(self, input : torch.Tensor) -> (torch.Tensor, torch.Tensor):
         output_a = self.a_layers(input)
         output_ppmi = self.ppmi_layers(input)
         

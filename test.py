@@ -104,40 +104,44 @@ def test_DGCN(dataset='cora', epochs=100, learning_rate=1e-3, batch_size=0,
                            lr     = learning_rate,
                            betas  = (0.9, 0.999), 
                            eps    = 1e-8)
-    loss_fnc = loss.DualLoss(supervised_loss_fnc   = loss.MaskedMSELoss(reduction='mean'),
+    # loss_fnc = loss.DualLoss(supervised_loss_fnc   = loss.MaskedMSELoss(reduction='mean'),
+    #                           unsupervised_loss_fnc = nn.MSELoss(reduction='mean'))
+    loss_fnc = loss.DualLoss(supervised_loss_fnc   = loss.MaskedCrossEntropyLoss(reduction='mean'),
                              unsupervised_loss_fnc = nn.MSELoss(reduction='mean'))
     
     # keep track of losses and accuracies
     model_results = defaultdict(list)
 
-    # TODO: implement batch training
     for epoch in range(epochs):
-        # forward pass
-        a_output, ppmi_output = model(features)
         
-        # calculate and store losses and accuracies
-        training_loss = loss_fnc(a_output, ppmi_output, y_train, train_mask)
-        validation_loss = loss_fnc(a_output, ppmi_output, y_val, val_mask)
-        validation_acc = utilities.accuracy(a_output, y_val, val_mask)
-        testing_acc = utilities.accuracy(a_output, y_test, test_mask)
+        for train_batch_mask in utilities.yield_batch_mask(train_mask, batch_size):
         
-        # store results for plotting
-        model_results['training_losses'].append(training_loss.item())
-        model_results['validation_losses'].append(validation_loss.item())
-        model_results['validation_accuracies'].append(validation_acc.item())
-        model_results['testing_accuracies'].append(testing_acc.item())
-        
-        if trace:
-            print("Epoch: {:04n},".format(epoch+1),
-                  "train_loss: {:.5f},".format(training_loss.item()),
-                  "val_loss: {:.5f},".format(validation_loss.item()),
-                  "val_acc: {:.5f},".format(validation_acc.item()),
-                  "test_acc: {:.5f}".format(testing_acc.item()))
+            # forward pass
+            a_output, ppmi_output = model(features)
             
-        # zero gradients, backward pass, update weights
-        model.zero_grad()
-        training_loss.backward()
-        optimizer.step()
+            # calculate and store losses and accuracies
+            training_loss = loss_fnc(a_output, ppmi_output, y_train, train_batch_mask)
+            validation_loss = loss_fnc(a_output, ppmi_output, y_val, val_mask)
+            validation_acc = utilities.accuracy(a_output, y_val, val_mask)
+            testing_acc = utilities.accuracy(a_output, y_test, test_mask)
+            
+            # store results for plotting
+            model_results['training_losses'].append(training_loss.item())
+            model_results['validation_losses'].append(validation_loss.item())
+            model_results['validation_accuracies'].append(validation_acc.item())
+            model_results['testing_accuracies'].append(testing_acc.item())
+            
+            if trace:
+                print("Epoch: {:04n},".format(epoch+1),
+                      "train_loss: {:.5f},".format(training_loss.item()),
+                      "val_loss: {:.5f},".format(validation_loss.item()),
+                      "val_acc: {:.5f},".format(validation_acc.item()),
+                      "test_acc: {:.5f}".format(testing_acc.item()))
+                
+            # zero gradients, backward pass, update weights
+            model.zero_grad()
+            training_loss.backward()
+            optimizer.step()
     
     return model_results
     
@@ -152,7 +156,7 @@ def plot_figures(model_results, rows, cols):
         xs = np.arange(len(model_results[NAMES[i]]))
         ys = model_results[NAMES[i]]
         fig.add_subplot(rows, cols, i + 1).set_title(NAMES[i])
-        plt.plot(xs, ys)
+        plt.scatter(xs, ys, s=0.5)
     plt.show()
     
     

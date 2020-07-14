@@ -18,6 +18,7 @@ import graphs
 import models
 import getdata
 import layers
+import loss
 
 
 
@@ -126,7 +127,29 @@ def main5():
 if __name__ == '__main__':
     print("Begin Testing...")
     
-    print(int(5.5))
+    G, features, y_train, y_val, y_test, train_mask, val_mask, test_mask = \
+        getdata.load_graph_data('cora', val_size=0.5, trace=True)
+    
+    y_pred = y_val.float()
+    loss_fnc1 = loss.MaskedMSELoss(reduction='mean')
+    result1 = loss_fnc1(y_pred, y_test, test_mask)
+    print(result1)
+    
+    loss_fnc2 = nn.MSELoss(reduction='mean')
+    
+    result2 = loss_fnc2(y_pred * test_mask.reshape(-1,1), y_test)
+    print(result2)
+    
+    # (target * torch.exp(input)).sum(axis=1)
+    
+    # result3 = (y_test * y_pred).exp().sum(axis=1).log()
+    result3 = (y_test * y_pred).sum(axis=1)
+    print(result3)
+    result3 *= test_mask
+    print(result3)
+    result3 = torch.mean(result3)
+    # result3 = torch.sum(result3) / y_pred.numel()
+    print(result3)
     
     print("End Testing...")
     
