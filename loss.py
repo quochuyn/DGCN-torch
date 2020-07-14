@@ -29,8 +29,8 @@ class MaskedMSELoss(nn.Module):
         l_n = (x_n - y_n)^2, \quad m_n \in \{0,1\}
         
     where `x` and `y` are tensors of arbitrary shape with `n` elements, `N` 
-    is the batch size, `*` the element-wise multiplication operator, and `M`
-    the boolean mask.
+    is the batch size, `*` the element-wise multiplication operator, and 
+    `\{m_1,\dots,m_N\}` the boolean mask.
 
     If not 'none', reduction is 'mean' by default which operates over all the 
     elements and divides by the total number of elements `n`.
@@ -55,7 +55,7 @@ class MaskedMSELoss(nn.Module):
         result *= target_mask
         if self.reduction != 'none':
             if self.reduction == 'mean':
-                result = torch.sum(result) / target.numel()
+                result = torch.mean(result)
             else:
                 result = torch.sum(result)
         return result
@@ -64,7 +64,31 @@ class MaskedMSELoss(nn.Module):
 
 class MaskedCrossEntropyLoss(nn.Module):
     r"""
-    Masked cross entropy loss. TODO
+    Creates a criterion that measures the cross entropy loss between each
+    element in the input `x` and target `y` according to the boolean mask 
+    `target_mask` which is a BoolTensor.
+    
+    The unreduced loss (i.e. when reduction is 'none') can be described as
+    
+        \ell(x,y) = L = \{l_1,\dots,l_N}^\top * \{m_1,\dots,m_N\}, \quad 
+        l_n = - (y_n * \log(x_n)), \quad m_n \in \{0,1\} 
+        
+    where `x` and `y` are tensors of arbitrary shape with `n` elements, `N` 
+    is the batch size, `*` the element-wise multiplication operator, and 
+    `\{m_1,\dots,m_N\}` the boolean mask.
+    
+    If not 'none', reduction is 'mean' by default which operates over all the 
+    elements and divides by the total number of elements `n`.
+    
+    The division by `n` can be avoided, if reduction is 'sum'.
+    
+    Parameters
+    ----------
+    reduction : str, optional
+        Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.
+        'none': no reduction will be applied. 'mean': the sum of the output
+        will be divided by the number of elements in the output. 'sum': the
+        output will be summed. The default is 'mean'.
     """
     
     def __init__(self, reduction='mean'):
@@ -76,7 +100,7 @@ class MaskedCrossEntropyLoss(nn.Module):
         result *= target_mask
         if self.reduction != 'none':
             if self.reduction == 'mean':
-                result = torch.sum(result) / target.numel()
+                result = torch.mean(result)
             else:
                 result = torch.sum(result)
         return result
