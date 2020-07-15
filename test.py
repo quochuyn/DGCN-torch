@@ -105,9 +105,9 @@ def test_DGCN(dataset='cora', epochs=100, learning_rate=1e-3, batch_size=0,
                            betas  = (0.9, 0.999), 
                            eps    = 1e-8)
     # loss_fnc = loss.DualLoss(supervised_loss_fnc   = loss.MaskedMSELoss(reduction='mean'),
-    #                           unsupervised_loss_fnc = nn.MSELoss(reduction='mean'))
+    #                          unsupervised_loss_fnc = nn.MSELoss(reduction='mean'))
     loss_fnc = loss.DualLoss(supervised_loss_fnc   = loss.MaskedCrossEntropyLoss(reduction='mean'),
-                             unsupervised_loss_fnc = nn.MSELoss(reduction='mean'))
+                              unsupervised_loss_fnc = nn.MSELoss(reduction='mean'))
     
     # keep track of losses and accuracies
     model_results = defaultdict(list)
@@ -143,13 +143,14 @@ def test_DGCN(dataset='cora', epochs=100, learning_rate=1e-3, batch_size=0,
             training_loss.backward()
             optimizer.step()
     
+    
     return model_results
     
         
 
 def plot_figures(model_results, rows, cols):
     NAMES = ['training_losses', 'validation_losses', 'validation_accuracies', 
-             'testing_accuracies', ]
+             'testing_accuracies']
     
     fig = plt.figure(figsize=(12,8))
     for i in range(rows*cols):
@@ -163,7 +164,7 @@ def plot_figures(model_results, rows, cols):
     
 if __name__ == '__main__':
     # dataset = sys.argv[1]
-    dataset = 'cora'
+    dataset = 'pubmed'
     print(f"Testing dataset... {dataset}")
     
     if dataset in ['cora', 'citeseer', 'pubmed']:

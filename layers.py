@@ -69,5 +69,6 @@ class hidden_dense_layer(nn.Module):
         
         
     def forward(self, input : torch.Tensor) -> torch.Tensor:
-        return self.layers(self.diffusion.mm(input))
+        Z = self.diffusion.mm(input)
+        return self.layers(Z)
     

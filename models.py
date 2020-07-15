@@ -79,8 +79,7 @@ class DGCN(nn.Module):
         
     def forward(self, input : torch.Tensor) -> (torch.Tensor, torch.Tensor):
         output_a = self.a_layers(input)
-        output_ppmi = self.ppmi_layers(input)
-        
+        output_ppmi = self.ppmi_layers(input)        
         return (output_a, output_ppmi)
     
     

@@ -14,10 +14,14 @@
 
 # module contains graph classes
 import networkx as nx
-
+import scipy.sparse as sp
+import numpy as np
 import torch
 import random
+import time
+
 import iterators
+
 
 
 
@@ -56,6 +60,7 @@ class graph(nx.Graph):
         
         D_inv_sqrt = diffusion.sum(axis=1).pow(-1/2).diag()
         return D_inv_sqrt.mm(diffusion).mm(D_inv_sqrt)
+        
     
         
     def adjacency_matrix(self, self_loops : bool = False) -> torch.Tensor:
@@ -79,18 +84,21 @@ class graph(nx.Graph):
             Adjacency matrix of the graph.
         """
         
+        # initialize adjacency matrix as scipy sparse lil matrix for efficient
+        # indexing
         num_nodes = self.number_of_nodes()
-        
-        # initialize adjacency matrix
         if self_loops == True:
-            adjacency = torch.eye(num_nodes, dtype=torch.float32)
+            adjacency = sp.eye(num_nodes, format='lil')
         else:
-            adjacency = torch.zeros(num_nodes, num_nodes, dtype=torch.float32)
-
+            adjacency = sp.lil_matrix((num_nodes, num_nodes))
+        
         # for any edge between two nodes, set their position in A as 1
         for node, neighbors in self.adjacency():
             for neighbor in neighbors.keys():
                 adjacency[node, neighbor] = 1.0
+        
+        # convert to pytorch tensor
+        adjacency = torch.as_tensor(adjacency.toarray(), dtype=torch.float32)
         
         return adjacency
     
@@ -113,12 +121,15 @@ class graph(nx.Graph):
 
         Returns
         -------
-        torch.Tensor
+        normalized_adjacency : torch.Tensor
             Normalized adjacency matrix of the graph.
         """
         
+        start_time = time.time()
         adjacency = self.adjacency_matrix(self_loops)
-        return self.normalized_diffusion_matrix(adjacency)
+        normalized_adjacency = self.normalized_diffusion_matrix(adjacency)
+        print(f'normalized_adjacency_matrix: {time.time() - start_time} seconds')
+        return normalized_adjacency
         
     
     def _random_walk(self, node : int, path_length : int) -> [int]:
@@ -174,9 +185,10 @@ class graph(nx.Graph):
             Frequency matrix of the graph.
         """
         
-        # initialize frequency matrix with zeros
+        # initialize frequency matrix as a scipy sparse lil matrix for
+        # efficient indexing
         num_nodes = self.number_of_nodes()
-        frequency = torch.zeros(num_nodes, num_nodes, dtype=torch.float32)
+        frequency = sp.lil_matrix((num_nodes, num_nodes))
         
         for node in self.nodes:
             for i in range(num_walks):
@@ -186,6 +198,9 @@ class graph(nx.Graph):
                 for pair in iterators.right_window_pairs(path, window_size):
                     frequency[pair[0], pair[1]] += 1.0
                     frequency[pair[1], pair[0]] += 1.0
+                    
+        # convert to pytorch tensor
+        frequency = torch.as_tensor(frequency.toarray(), dtype=torch.float32)
 
         return frequency
 
@@ -265,13 +280,16 @@ class graph(nx.Graph):
 
         Returns
         -------
-        torch.Tensor
+        normalized_ppmi : torch.Tensor
             Normalized positive pointwise mutual information matrix.
         """
         
+        start_time = time.time()
         ppmi = self.ppmi_matrix(path_length = path_length, 
                                 num_walks   = num_walks, 
                                 window_size = window_size)
-        return self.normalized_diffusion_matrix(ppmi)
+        normalized_ppmi = self.normalized_diffusion_matrix(ppmi)
+        print(f'normalized_ppmi_matrix: {time.time() - start_time} seconds')
+        return normalized_ppmi
 
 
