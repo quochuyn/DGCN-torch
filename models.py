@@ -53,28 +53,26 @@ class DGCN(nn.Module):
         self.a_layers = nn.Sequential()
         self.ppmi_layers = nn.Sequential()
         
+        num_layers = len(layer_sizes)
+        
         # define the dual NN sharing the same weight W
-        for index, (n_in, n_out) in enumerate(layer_sizes):
+        for index, (n_in, n_out) in enumerate(layer_sizes, 1):
             _hidden_layer_a = hidden_dense_layer(
                 in_features  = n_in,
                 out_features = n_out,
                 diffusion    = adjacency,
-                dropout_rate = dropout_rate,
-                activation   = activation)
-            self.a_layers.add_module(f'hidden_a{index + 1}', _hidden_layer_a)
+                dropout_rate = dropout_rate if index != num_layers else 0.0,
+                activation   = activation if index != num_layers else final_activation)
+            self.a_layers.add_module(f'hidden_a{index}', _hidden_layer_a)
             
             _hidden_layer_ppmi = hidden_dense_layer(
                 in_features  = n_in,
                 out_features = n_out,
                 diffusion    = ppmi,
-                dropout_rate = dropout_rate,
+                dropout_rate = dropout_rate if index != num_layers else 0.0,
                 W            = _hidden_layer_a.weight,
-                activation   = activation)
-            self.ppmi_layers.add_module(f'hidden_ppmi{index + 1}', _hidden_layer_ppmi)
-
-        # add the final activation layer to apply labels
-        self.a_layers.add_module('final_activation_a', final_activation)
-        self.ppmi_layers.add_module('final_activation_ppmi', final_activation)
+                activation   = activation if index != num_layers else final_activation)
+            self.ppmi_layers.add_module(f'hidden_ppmi{index}', _hidden_layer_ppmi)
         
         
     def forward(self, input : torch.Tensor) -> (torch.Tensor, torch.Tensor):

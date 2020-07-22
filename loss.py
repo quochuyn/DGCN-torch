@@ -121,12 +121,13 @@ class DualLoss(nn.Module):
         super(DualLoss, self).__init__()
         self.supervised_loss_fnc = supervised_loss_fnc
         self.unsupervised_loss_fnc = unsupervised_loss_fnc
-
-    def forward(self, a_input, ppmi_input, target, target_mask):
-        weight = nn.Parameter(torch.randn(1)) * 0.01
-        result = (self.supervised_loss_fnc(a_input, target, target_mask)
-                  + weight * self.unsupervised_loss_fnc(a_input, ppmi_input))
+        
+    def forward(self, a_input, ppmi_input, target, target_mask, weight=None):
+        if weight == None:
+            weight = nn.Parameter(torch.rand(1).to(torch.cuda.current_device())) * 0.01
+        supervised_loss = self.supervised_loss_fnc(a_input, target, target_mask)
+        unsupervised_loss = self.unsupervised_loss_fnc(a_input, ppmi_input)
+        result = (supervised_loss + weight * unsupervised_loss)
         return result
-
 
 

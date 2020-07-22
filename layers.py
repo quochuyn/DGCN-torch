@@ -60,15 +60,12 @@ class hidden_dense_layer(nn.Module):
         # give access to the linear weight parameters if need to share
         self.weight = linear.weight
             
-        self.layers.add_module("linear", linear)
-        self.layers.add_module("activation", activation)
-        
-        if dropout_rate != 0.0:
-            dropout = nn.Dropout(dropout_rate)
-            self.layers.add_module("dropout", dropout)
+        self.layers.add_module('linear', linear)
+        self.layers.add_module('activation', activation)
+        self.layers.add_module('dropout', nn.Dropout(dropout_rate))
         
         
     def forward(self, input : torch.Tensor) -> torch.Tensor:
-        Z = self.diffusion.mm(input)
+        Z = self.diffusion.matmul(input)
         return self.layers(Z)
     
