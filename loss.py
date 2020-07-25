@@ -80,6 +80,8 @@ class MaskedCrossEntropyLoss(nn.Module):
     
     Parameters
     ----------
+    eps : float, optional
+        Small value to avoid evaluation of \log(0). The default is 1e-8.
     reduction : str, optional
         Specifies the reduction to apply to the output: 'none' | 'mean' | 'sum'.
         'none': no reduction will be applied. 'mean': the sum of the output
@@ -87,12 +89,13 @@ class MaskedCrossEntropyLoss(nn.Module):
         output will be summed. The default is 'mean'.
     """
     
-    def __init__(self, reduction='mean'):
+    def __init__(self, eps=1e-8, reduction='mean'):
         super(MaskedCrossEntropyLoss, self).__init__()
         self.reduction = reduction
+        self.eps = eps
         
     def forward(self, input, target, target_mask):
-        result = -(target * input.log()).sum(axis=1)
+        result = -(target * (input + self.eps).log()).sum(axis=1)
         result *= target_mask
         if self.reduction != 'none':
             if self.reduction == 'mean':
@@ -124,10 +127,12 @@ class DualLoss(nn.Module):
         
     def forward(self, a_input, ppmi_input, target, target_mask, weight=None):
         if weight == None:
-            weight = nn.Parameter(torch.rand(1).to(torch.cuda.current_device())) * 0.01
+            weight = 1.0
         supervised_loss = self.supervised_loss_fnc(a_input, target, target_mask)
         unsupervised_loss = self.unsupervised_loss_fnc(a_input, ppmi_input)
         result = (supervised_loss + weight * unsupervised_loss)
+        # print(f"  supervised_loss: {supervised_loss}")
+        # print(f"  unsupervised_loss: {unsupervised_loss}")
         return result
 
 

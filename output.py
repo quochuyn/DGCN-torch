@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 
 
 def plot_figures(model_results, names, rows, cols):
-    """
-    
+    r"""
+    Plot figures corresponding to each name in `names` where the data can be 
+    found in the dictionary `model_results`.
 
     Parameters
     ----------

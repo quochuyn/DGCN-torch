@@ -16,9 +16,9 @@ import torch.nn as nn
 class hidden_dense_layer(nn.Module):
     r"""
     The hidden dense layer as defined in the DGCN paper combines an unbiased
-    linear layer (torch.nn.Linear) followed by an activation layer which is, 
-    by default, ReLU (torch.nn.ReLU) and an optional dropout layer 
-    (torch.nn.Dropout).
+    linear layer (torch.nn.Linear) followed by an optional batch normalization
+    layer (nn.BatchNorm1d), then an activation layer which is, by default, ReLU
+    (torch.nn.ReLU) and an optional dropout layer (torch.nn.Dropout).
 
     Parameters
     ----------
@@ -26,22 +26,26 @@ class hidden_dense_layer(nn.Module):
         Number of features of input tensor.
     out_features : int
         Number of features of output tensor.
-    diffusion : torch.Tensor
+    diffusion : torch.Tensor, optional
         Diffusion matrix, i.e. the adjacency matrix or positive pointwise
-        mutual information matrix.
-    dropout_rate : float
-        Dropout rate for randomly settings some elements as zero. 
+        mutual information matrix. The default is None.
+    dropout_rate : float, optional
+        Dropout rate for randomly settings some elements as zero. The default
+        is 0.3.
     W : torch.Tensor, optional
         User-defined weight matrix. The default is None.
-    activation : optional
-        An activation layer from torch.nn. The default is 
-        nn.ReLU().
+    batch_norm : bool, optional
+        Boolean value whether to include a batch normalization layer after
+        the linear pass.
+    activation : str, optional
+        An activation layer from torch.nn. The default is 'relu'.
     """
     
     
     def __init__(self, in_features : int, out_features : int,
-                 diffusion : torch.Tensor, dropout_rate : float = 0.3,
-                 W : torch.Tensor = None, activation = nn.ReLU()):
+                 diffusion : torch.Tensor = None, dropout_rate : float = 0.3,
+                 W : torch.Tensor = None, batch_norm = False,
+                 activation = 'relu'):
         
         super(hidden_dense_layer, self).__init__()
         self.in_features = in_features
@@ -50,6 +54,7 @@ class hidden_dense_layer(nn.Module):
         self.layers = nn.Sequential()
         
         linear = nn.Linear(in_features, out_features, bias=False)
+        activation = get_activation(activation)
         
         # reassign weight to linear layer if given one
         if W is not None:
@@ -61,11 +66,31 @@ class hidden_dense_layer(nn.Module):
         self.weight = linear.weight
             
         self.layers.add_module('linear', linear)
+        if batch_norm == True:
+            self.layers.add_module('batchnorm', nn.BatchNorm1d(out_features))
         self.layers.add_module('activation', activation)
         self.layers.add_module('dropout', nn.Dropout(dropout_rate))
         
         
     def forward(self, input : torch.Tensor) -> torch.Tensor:
-        Z = self.diffusion.matmul(input)
-        return self.layers(Z)
-    
+        if self.diffusion is not None:
+            return self.layers(self.diffusion.matmul(input))
+        else:
+            return self.layers(input)
+
+
+def get_activation(activation):
+    if activation == 'relu':
+        activation = nn.ReLU()
+    elif activation == 'softmax':
+        activation = nn.Softmax(dim=1)
+    elif activation == 'tanh':
+        activation = nn.Tanh()
+    elif activation == 'sigmoid':
+        activation = nn.Sigmoid()
+    else:
+        assert False, f"get_activation: activation function '{activation}' not supported"
+
+    return activation
+
+
